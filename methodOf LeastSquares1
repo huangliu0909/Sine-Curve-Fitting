@@ -1,0 +1,96 @@
+import random
+import math
+import matplotlib.pyplot as plt
+import numpy as np
+
+minLoss = 100000
+minLossDegree = -1
+mminLoss = 100000
+mminLossDegree = -1
+LOSS = np.zeros(20)
+LLOSS = np.zeros(20)
+for degree in range (1,20):
+    lamda = 2
+    # produce data
+    x = [random.uniform(0, 2 * math.pi) for _ in range(50)]
+    x = sorted(x)
+    y = [math.sin(x[i]) for i in range(50)]
+
+    # add voice
+    y = [math.sin(x[i]) + random.gauss(0, 0.12) for i in range(50)]
+
+    # 生成特征矩阵X
+    X = np.ones((50, degree+1))
+    for i in range(50):
+        X[i, 0] = 1
+        for j in range(1,degree+1):
+            X[i, j] = math.pow(x[i], j)
+
+    # 生成矩阵Y
+    Y = np.sin(x) + np.random.normal(scale=0.1, size=len(x))
+    Y = Y.reshape(50, 1)
+
+    # 求无正则项系数A
+    A = np.linalg.inv(np.dot(X.T, X)).dot(X.T).dot(Y)
+    print("无正则项系数矩阵为:")
+    print(A)
+
+    # 无正则项LOSS
+    loss = 0
+    for i in range (50):
+        loss += (Y[i][0] - X.dot(A)[i][0]) * (Y[i][0] - X.dot(A)[i][0])
+    loss = loss/2
+    LOSS[degree - 1] = loss
+    if loss < minLoss:
+        minLoss = loss
+        minLossDegree = degree
+
+    # 求有正则项系数B
+    a = np.dot(X.T, X)
+    b = np.ones((50, degree+1))
+    for i in range(degree+1):
+        for j in range(degree+1):
+            if i == 0:
+                b[i, j] = 0
+            elif j == 0:
+                b[i, j] = 0
+            elif i == j:
+                b[i, j] = 1
+            else:
+                b[i, j] = 0
+    c = np.ones((degree+1, degree+1))
+    for i in range(degree+1):
+        for j in range(degree+1):
+            c[i, j] = a[i, j] + b[i, j] * lamda
+    B = np.linalg.inv(c).dot(X.T).dot(Y)
+    print("有正则项系数矩阵为:")
+    print(B)
+
+    # 有正则项LOSS
+    lloss = 0
+    for i in range(50):
+        lloss += (Y[i][0] - X.dot(B)[i][0]) * (Y[i][0] - X.dot(B)[i][0])
+    lloss = lloss / 2
+    LLOSS[degree - 1] = lloss
+    if lloss < mminLoss:
+        mminLoss = lloss
+        mminLossDegree = degree
+
+    # plt.plot(x, X.dot(A), 'r', label="predict data1")
+    # plt.plot(x, X.dot(B), 'r', color="blue", label="predict data2")
+    # plt.plot(x, Y, 'g.', label="actual data")
+    # plt.title("degree=" + str(degree) )
+    # plt.show()
+
+DEGREE = np.zeros(20)
+for i in range (1, 20):
+    DEGREE[i] = i
+plt.plot(DEGREE, LOSS, 'r', label="without Regular term")
+plt.plot(DEGREE, LLOSS, 'r',color="blue", label="with Regular term")
+plt.title("LOSS-degree"  )
+plt.xlabel("degree")
+plt.ylabel("loss")
+plt.legend()
+plt.show()
+print("lamda = 2、num = 50时，最小无正则loss= " + str(minLoss) + "  此时的degree = "+str(minLossDegree))
+print("lamda = 2、num = 50时，最小有正则loss= " + str(mminLoss) + "  此时的degree = "+str(mminLossDegree))
